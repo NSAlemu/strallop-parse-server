@@ -53,9 +53,6 @@ Parse.Cloud.define("createOrgRole", async (request) => {
         throw error
     });
 
-    user.get('organization').relation('organizationalRoles').add(orgAdminRole);
-    await user.save(null, {useMasterKey: true});
-
     return newRole
 }, {
     fields: ['role'],

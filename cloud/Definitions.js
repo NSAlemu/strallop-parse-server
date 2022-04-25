@@ -3,7 +3,7 @@ Parse.Cloud.define("createMultipleTickets", async (request) => {
     const eventId = request.params.eventId;
     for (let ticket of request.params.tickets) {
         let newTicket = new (Parse.Object.extend('TicketType'))();
-
+        newTicket.setACL(new Parse.ACL())
         newTicket.set('name', ticket.name);
         newTicket.set('capacity', ticket.capacity);
         newTicket.set('price', ticket.price);

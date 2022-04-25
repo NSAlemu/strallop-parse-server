@@ -2,6 +2,7 @@ const {authenticateOrganizationThroughOrganization, authenticateOrganizationThro
 Parse.Cloud.define("createUser", async (request) => {
     const params = request.params
     const user = new Parse.User();
+    user.setACL(new Parse.ACL())
     user.set('username', params.userData.username);
     user.set('password', params.password);
     user.set('email', params.userData.email);
