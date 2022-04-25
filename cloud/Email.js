@@ -11,7 +11,7 @@ Parse.Cloud.define("sendConfirmationEmail", async (request) => {
 });
 
 Parse.Cloud.define("sendReminderEmail", async (request) => {
-    await sendReminderEmail(request.params.eventId);
+    await this.sendReminderEmail(request.params.eventId);
 }, {
     fields: ['eventId']
 });
