@@ -26,7 +26,7 @@ Parse.Cloud.define("getAllBudgetCategories", async (request) => {
     ];
     const totalPaid = await new Parse.Query("BudgetPaidItem")
         .aggregate(pipeline, {useMasterKey: true}).then(value => {
-            if (!value || !value[0] | !value[0].total) {
+            if (!value || !value[0] || !value[0].total) {
                 total = 0
                 return
             }
