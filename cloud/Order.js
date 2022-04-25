@@ -1,7 +1,7 @@
 const {createPersonalInformation, updatePersonalInformation} = require("./PersonalInformation");
 const {createTicketOrder} = require("./TicketOrder");
 const {authenticateOrganizationThroughEvent, authenticateOrganizationThroughOrder} = require("./authentication");
-const {response} = require("express");
+
 Parse.Cloud.define("getAllOrders", async (request) => {
     const params = request.params;
     await authenticateOrganizationThroughEvent(params.eventId, request.user.id);

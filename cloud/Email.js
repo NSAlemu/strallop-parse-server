@@ -3,10 +3,9 @@ const {
     ConfirmationEmailTemplate,
     ReminderEmailOrderTemplate
 } = require("./EmailTemplates");
-const {sendConfirmationEmail, sendReminderEmail} = require("./Email");
 
 Parse.Cloud.define("sendConfirmationEmail", async (request) => {
-    await sendConfirmationEmail(request.params.orderId);
+    await this.sendConfirmationEmail(request.params.orderId);
 }, {
     fields: ['orderId']
 });

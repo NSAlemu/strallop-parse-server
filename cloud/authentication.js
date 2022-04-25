@@ -1,4 +1,3 @@
-const {authenticateOrganizationThroughOrganization} = require("./authentication");
 exports.authenticateOrganizationThroughEvent = async (eventId, userId) => {
     await new Parse.Query(Parse.Object.extend('Event'))
         .include("createdBy").include('createdBy.organization').get(eventId, {useMasterKey: true})
