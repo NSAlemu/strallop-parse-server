@@ -41,7 +41,11 @@ Parse.Cloud.define("createEvent", async (request) => {
     newEvent.set("isOnline", params.isOnline);
     newEvent.set("publishDate", params.publishDate);
     newEvent.set("createdBy", user);
-    newEvent.set("coverImage", params.coverImage);
+    if (params.coverImage) {
+        const file = new Parse.File("coverImage.png", {base64: params.coverImage});
+        const parseFile = await file.save({useMasterKey: true})
+        parseEvent.set('coverImage', parseFile)
+    }
     newEvent.set("address", await createAddress(params.address));
     newEvent.set("status", (Parse.Object.extend('EventStatus')).createWithoutData(params.status.id))
 
