@@ -22,7 +22,6 @@ Parse.Cloud.define("getAllEvents", async (request) => {
 
 Parse.Cloud.define("createEvent", async (request) => {
     const params = request.params
-    await authenticateOrganizationThroughEvent(params.eventId, request.user.id);
 
     const user = await new Parse.Query(Parse.User)
         .get(request.user.id, {useMasterKey: true})
