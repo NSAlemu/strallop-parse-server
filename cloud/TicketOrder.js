@@ -8,6 +8,7 @@ Parse.Cloud.define("getAllTicketOrders", async (request) => {
     await authenticateOrganizationThroughEvent(params.eventId, request.user.id);
     const event = await new Parse.Query(Parse.Object.extend('Event')).get(params.eventId, {useMasterKey: true})
     const ticketTypes = await new Parse.Query(Parse.Object.extend('TicketType'))
+        .include("address")
         .equalTo('event', Parse.Object.extend("Event").createWithoutData(params.eventId))
         .find({useMasterKey: true}).then(value => {
             return value
@@ -179,7 +180,7 @@ exports.createTicketOrder = async (statusId, selectedTicketTypeId, attendeeInfo,
     return orderedTicketObject.save(null, {useMasterKey: true}).then(value => {
         return value
     }, error => {
-        console.log('\n\nerror', JSON.stringify(error),'\n\n',)
+        console.log('\n\nerror', JSON.stringify(error), '\n\n',)
         throw error;
     })
 }
