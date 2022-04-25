@@ -64,7 +64,7 @@ Parse.Cloud.define("updateUser", async (request) => {
         }, (error) => {
             throw  error
         })
-    await authenticateOrganizationThroughUser(parseUser.userData.id, request.user.id)
+    await authenticateOrganizationThroughUser(params.userData.id, request.user.id)
     parseUser.set('username', params.userData.username)
     parseUser.set('name', params.userData.name)
 
