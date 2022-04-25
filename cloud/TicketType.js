@@ -1,8 +1,10 @@
 //include how many people have bought the tickets
 
 const {basicEventDetails} = require("./Event");
+const {authenticateOrganizationThroughEvent} = require("./authentication");
 Parse.Cloud.define("getAllTicketTypes", async (request) => {
     const params = request.params;
+    await authenticateOrganizationThroughEvent(params.eventId, request.user.id);
     const parseEvent = await new Parse.Query(Parse.Object.extend('Event'))
         .get(params.eventId, {useMasterKey: true}).then(value => {
             return value
@@ -20,13 +22,14 @@ Parse.Cloud.define("getAllTicketTypes", async (request) => {
     }
 }, {
     fields: ['eventId'],
-    requireUser:true,
+    requireUser: true,
     requireAllUserRoles: ['manageTickets']
 });
 
 //include how many people have bought the tickets
 Parse.Cloud.define("addTicketType", async (request) => {
     const params = request.params;
+    await authenticateOrganizationThroughEvent(params.eventId, request.user.id);
     const parseEvent = await new Parse.Query(Parse.Object.extend('Event'))
         .get(params.eventId, {useMasterKey: true}).then(value => {
             return value
@@ -56,7 +59,7 @@ Parse.Cloud.define("addTicketType", async (request) => {
     return savedTicketType
 }, {
     fields: ['eventId', 'ticket'],
-    requireUser:true,
+    requireUser: true,
     requireAllUserRoles: ['manageTickets']
 });
 
@@ -70,18 +73,20 @@ Parse.Cloud.define("getTicketType", async (request) => {
         })
 }, {
     fields: ['ticketTypeId'],
-    requireUser:true,
+    requireUser: true,
     requireAllUserRoles: ['manageTickets']
 });
 
 Parse.Cloud.define("updateTicketType", async (request) => {
     const params = request.params
     const newTicket = await new Parse.Query(Parse.Object.extend('TicketType'))
+        .includes('event')
         .get(params.ticket.id, {useMasterKey: true}).then(value => {
             return value
         }, (error) => {
             throw  error
         })
+    await authenticateOrganizationThroughEvent(newTicket.get('event').id, request.user.id);
     const fieldsToUpdate = ['name', 'capacity', 'price',
         'salesStartDate', 'salesEndDate', 'requireAttendeeInfo',
         'attendeeLimitPerOrder']
@@ -96,12 +101,12 @@ Parse.Cloud.define("updateTicketType", async (request) => {
 
 }, {
     fields: ['eventId', 'ticket'],
-    requireUser:true,
+    requireUser: true,
     requireAllUserRoles: ['manageTickets']
 });
 
 //If it contains no orders
-Parse.Cloud.define("removeTicketTypeFromEvent", async (request) => {
+Parse.Cloud.define("deleteTicketTypes", async (request) => {
     const params = request.params;
     await new Parse.Query(Parse.Object.extend('TicketOrder'))
         .equalTo('ticketType', Parse.Object.extend('TicketType').createWithoutData(params.ticketId))
@@ -112,32 +117,21 @@ Parse.Cloud.define("removeTicketTypeFromEvent", async (request) => {
         }, (error) => {
             throw  error
         })
-    const parseEvent = await new Parse.Query(Parse.Object.extend('Event'))
-        .get(params.eventId, {useMasterKey: true}).then(async value => {
+    const ticketType = await new Parse.Query(Parse.Object.extend('TicketType'))
+        .get(params.ticketId, {useMasterKey: true}).then(async value => {
             return value;
         }, (error) => {
             throw error
         });
-
-    parseEvent.relation('ticketTypes').remove(Parse.Object.extend('TicketType').createWithoutData(params.ticketId));
-    parseEvent.save(null, {useMasterKey: true}).then(value => {
-    }, (error) => {
+    await authenticateOrganizationThroughEvent(params.eventId, request.user.id);
+    ticketType.destroy({useMasterKey: true}).then(value => {
+    }, error => {
         throw error
-    })
+    });
 
     return true
 }, {
-    fields: ['eventId'],
-    requireUser:true,
-    requireAllUserRoles: ['manageTickets']
-});
-
-//If it contains no orders
-Parse.Cloud.define("deleteTicketTypes", async (request) => {
-    const eventId = request.params.eventId;
-
-}, {
-    fields: ['eventId'],
-    requireUser:true,
+    fields: ['eventId', 'ticketId'],
+    requireUser: true,
     requireAllUserRoles: ['manageTickets']
 });
