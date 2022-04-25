@@ -26,7 +26,11 @@ Parse.Cloud.define("getAllBudgetCategories", async (request) => {
     ];
     const totalPaid = await new Parse.Query("BudgetPaidItem")
         .aggregate(pipeline, {useMasterKey: true}).then(value => {
-            return value[0].total
+            if (!value || !value[0] | !value[0].total) {
+                total = 0
+                return
+            }
+            value[0].total
         }, error => {
             throw error
         })
@@ -132,7 +136,7 @@ Parse.Cloud.define("deleteBudgetCategory", async (request) => {
 });
 
 exports.createDefaultBudgetCategories = async (eventId) => {
-    const defaultCategoryNames = ['Catering','Venue','Photography','Rental','Music','Tech Support','Ushers']
+    const defaultCategoryNames = ['Catering', 'Venue', 'Photography', 'Rental', 'Music', 'Tech Support', 'Ushers']
     const defaultCategories = []
     for (let i = 0; i < defaultCategoryNames.length; i++) {
         const newCategory = new (Parse.Object.extend("BudgetCategory"))();
@@ -142,7 +146,7 @@ exports.createDefaultBudgetCategories = async (eventId) => {
 
         defaultCategories.push(newCategory);
     }
-    return await Parse.Object.saveAll(defaultCategories, {useMasterKey:true}).then(value => {
+    return await Parse.Object.saveAll(defaultCategories, {useMasterKey: true}).then(value => {
         return value
     }, (error) => {
         throw error
