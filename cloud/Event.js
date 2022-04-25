@@ -31,8 +31,8 @@ Parse.Cloud.define("createEvent", async (request) => {
     newEvent.set("locationName", params.locationName);
     newEvent.set("isPublishScheduled", params.isPublishScheduled);
     newEvent.set("name", params.name);
-    newEvent.set("startDate", params.startDate);
-    newEvent.set("endDate", params.endDate);
+    newEvent.set("startDate", new Date(params.startDate));
+    newEvent.set("endDate", new Date(params.endDate));
     newEvent.set("isPrivate", params.isPrivate);
     newEvent.set("organization", user.get("organization"));
     newEvent.set("description", params.description);
