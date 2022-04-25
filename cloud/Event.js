@@ -26,6 +26,7 @@ Parse.Cloud.define("createEvent", async (request) => {
     const user = await new Parse.Query(Parse.User)
         .get(request.user.id, {useMasterKey: true})
 
+    console.log('\n\n\n', JSON.stringify(params),"\n\n\n")
     const newEvent = new (Parse.Object.extend("Event"))();
     newEvent.setACL(new Parse.ACL())
     newEvent.set("locationName", params.locationName);
@@ -44,14 +45,16 @@ Parse.Cloud.define("createEvent", async (request) => {
     newEvent.set("address", await createAddress(params.address));
     newEvent.set("status", (Parse.Object.extend('EventStatus')).createWithoutData(params.status.id))
 
-    newEvent.set('reminderEmail',await createEmail(params.eventId));
-    newEvent.set('confirmationEmail',await createEmail(params.eventId));
-    await createDefaultBudgetCategories(params.eventId)
-    return newEvent.save(null, {useMasterKey: true}).then(async event => {
+    newEvent.set('reminderEmail', await createEmail(params.eventId));
+    newEvent.set('confirmationEmail', await createEmail(params.eventId));
+
+    await newEvent.save(null, {useMasterKey: true}).then(async event => {
         return event;
     }, (error) => {
         throw error
     });
+    await createDefaultBudgetCategories(newEvent.id)
+    return newEvent
 }, {
     fields: ['address', 'name', 'startDate', 'endDate', 'isPrivate', 'description', 'isDraft'],
     requireUser: true,
