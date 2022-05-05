@@ -58,7 +58,6 @@ Parse.Cloud.define("createEvent", async (request) => {
     newEvent.set('confirmationEmail', await createEmail(newEvent.id));
     await createDefaultBudgetCategories(newEvent.id)
     await newEvent.save(null, {useMasterKey: true}).then(async event => {
-        return event;
     }, (error) => {
         throw error
     });

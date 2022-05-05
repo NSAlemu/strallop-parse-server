@@ -6,33 +6,40 @@ const {
 Parse.Cloud.define("getAllTicketOrders", async (request) => {
     const params = request.params;
     await authenticateOrganizationThroughEvent(params.eventId, request.user.id);
-    const event = await new Parse.Query(Parse.Object.extend('Event')).include("address")
+    const eventPromise = new Parse.Query(Parse.Object.extend('Event')).include("address")
         .get(params.eventId, {useMasterKey: true})
-    const ticketTypes = await new Parse.Query(Parse.Object.extend('TicketType'))
+
+    const ticketTypesPromise = new Parse.Query(Parse.Object.extend('TicketType'))
         .equalTo('event', Parse.Object.extend("Event").createWithoutData(params.eventId))
+        .ascending('name')
         .find({useMasterKey: true}).then(value => {
             return value
         }, (error) => {
             throw error
         })
-
-    return {
-        ticketOrders: await new Parse.Query(Parse.Object.extend('TicketOrder'))
-            .descending('createdAt')
-            .equalTo('event', Parse.Object.extend("Event").createWithoutData(params.eventId))
-            .include('event')
-            .include('order')
-            .include('status')
-            .include('ticketType')
-            .include('attendeeInfo')
-            .include('attendeeInfo.address')
-            .find({useMasterKey: true}).then(async value => {
-                return value
-            }, (error) => {
-                throw error
-            }),
-        event, ticketTypes
-    }
+    const innerCancelledTicketOrderQuery = new Parse.Query( Parse.Object.extend("TicketStatus"));
+    innerCancelledTicketOrderQuery.equalTo("statusName", "Cancelled");
+    let ticketOrdersPromise = new Parse.Query(Parse.Object.extend('TicketOrder'))
+        .doesNotMatchQuery('status',innerCancelledTicketOrderQuery)
+        .descending('createdAt')
+        .equalTo('event', Parse.Object.extend("Event").createWithoutData(params.eventId))
+        .include('event')
+        .include('order')
+        .include('status')
+        .include('ticketType')
+        .include('attendeeInfo')
+        .include('attendeeInfo.address')
+        .find({useMasterKey: true}).then(async value => {
+            return value
+        }, (error) => {
+            throw error
+        })
+    const promises = await Promise.all([ticketOrdersPromise, eventPromise, ticketTypesPromise]).then(value => {
+        return value
+    }, (error) => {
+        throw error
+    })
+    return {ticketOrders: promises[0], event: promises[1], ticketTypes: promises[2]}
 }, {
     fields: ['eventId'],
     requireUser: true,
@@ -44,8 +51,11 @@ Parse.Cloud.define("getAllTicketOrdersForOrder", async (request) => {
     await authenticateOrganizationThroughOrder(params.orderId, request.user.id);
 
     const parseEvent = await new Parse.Query(Parse.Object.extend('Order'))
+        .include('ticketType')
+        .include('event.name')
         .get(params.orderId, {useMasterKey: true})
     return parseEvent.relation("orderedTickets").query()
+        .descending('createdAt')
         .find({useMasterKey: true}).then(value => {
             return value
         }, error => {

@@ -5,6 +5,7 @@ Parse.Cloud.define("getAllBudgetItems", async (request) => {
     await authenticateOrganizationThroughEvent(params.eventId, request.user.id)
     return await new Parse.Query(Parse.Object.extend("BudgetItem"))
         .equalTo("event", Parse.Object.extend('Event').createWithoutData(request.params.eventId))
+        .ascending('name')
         .find({useMasterKey: true}).then(value => {
             return value
         }, (error) => {

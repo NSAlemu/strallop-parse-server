@@ -5,6 +5,7 @@ Parse.Cloud.define("getAllBudgetCategories", async (request) => {
     await authenticateOrganizationThroughEvent(params.eventId, request.user.id)
     const budgetCategories = await new Parse.Query(Parse.Object.extend("BudgetCategory"))
         .equalTo("event", Parse.Object.extend('Event').createWithoutData(params.eventId))
+        .ascending('name')
         .find({useMasterKey: true}).then(value => {
             return value
         }, (error) => {
@@ -12,6 +13,7 @@ Parse.Cloud.define("getAllBudgetCategories", async (request) => {
         });
     const budgetItems = await new Parse.Query(Parse.Object.extend("BudgetItem"))
         .equalTo("event", Parse.Object.extend('Event').createWithoutData(params.eventId))
+        .ascending('name')
         .find({useMasterKey: true}).then(value => {
             return value
         }, (error) => {
@@ -121,7 +123,9 @@ Parse.Cloud.define("deleteBudgetCategory", async (request) => {
         })
     await authenticateOrganizationThroughEvent(category.get('event').id, request.user.id)
 
-    const items = await category.relation('budgetItems').query().find({useMasterKey: true}).then(value => {
+    const items = await category.relation('budgetItems').query()
+        .ascending('name')
+        .find({useMasterKey: true}).then(value => {
         return value
     }, (error) => {
         throw error

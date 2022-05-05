@@ -5,6 +5,7 @@ Parse.Cloud.define("getAllEventDocuments", async (request) => {
     const fileStore = await new Parse.Query(Parse.Object.extend('FileStore'))
         .include('event')
         .equalTo('event', Parse.Object.extend("Event").createWithoutData(params.eventId))
+        .ascending('name')
         .find({useMasterKey: true}).then(value => {
             return value
         }, error => {

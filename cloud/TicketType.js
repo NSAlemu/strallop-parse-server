@@ -13,6 +13,7 @@ Parse.Cloud.define("getAllTicketTypes", async (request) => {
         })
     return {
         ticketTypes: await parseEvent.relation("ticketTypes").query()
+            .ascending('name')
             .find({useMasterKey: true}).then(value => {
                 return value
             }, error => {
@@ -80,8 +81,7 @@ Parse.Cloud.define("getTicketType", async (request) => {
 Parse.Cloud.define("updateTicketType", async (request) => {
     const params = request.params
     const newTicket = await new Parse.Query(Parse.Object.extend('TicketType'))
-        .includes('event')
-        .get(params.ticket.id, {useMasterKey: true}).then(value => {
+        .include('event').get(params.ticket.id, {useMasterKey: true}).then(value => {
             return value
         }, (error) => {
             throw  error
@@ -110,6 +110,7 @@ Parse.Cloud.define("deleteTicketTypes", async (request) => {
     const params = request.params;
     await new Parse.Query(Parse.Object.extend('TicketOrder'))
         .equalTo('ticketType', Parse.Object.extend('TicketType').createWithoutData(params.ticketId))
+        .descending('createdAt')
         .find({useMasterKey: true}).then(value => {
             if (value.length > 0)
                 throw new Parse.Error(Parse.Error.VALIDATION_ERROR,

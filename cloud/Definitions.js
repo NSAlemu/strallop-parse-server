@@ -59,6 +59,7 @@ orderShareByTicketType = async (eventId) => {
     const ticketOrders = await new Parse.Query(Parse.Object.extend("TicketOrder"))
         .equalTo("event", Parse.Object.extend("Event").createWithoutData(eventId))
         .include('ticketType')
+        .descending('createdAt')
         .find({useMasterKey: true}).then(value => {
             return value
         }, (error) => {
@@ -66,6 +67,7 @@ orderShareByTicketType = async (eventId) => {
         });
     const ticketTypes = await new Parse.Query(Parse.Object.extend("TicketType"))
         .equalTo("event", Parse.Object.extend("Event").createWithoutData(eventId))
+        .ascending('name')
         .find({useMasterKey: true}).then(value => {
             return value
         }, (error) => {
@@ -102,7 +104,7 @@ ticketOrderSales = async (eventId) => {
     const ticketOrders = await new Parse.Query(Parse.Object.extend("TicketOrder"))
         .equalTo("event", Parse.Object.extend("Event").createWithoutData(eventId))
         .include('ticketType')
-        .ascending('createdAt')
+        .descending('createdAt')
         .find({useMasterKey: true}).then(value => {
             return value
         }, (error) => {
@@ -134,7 +136,7 @@ last10Orders = async (eventId) => {
         .include('ticketType')
         .include('buyerInfo')
         .include('status')
-        .ascending('createdAt')
+        .descending('createdAt')
         .find({useMasterKey: true}).then(value => {
             return value
         }, (error) => {

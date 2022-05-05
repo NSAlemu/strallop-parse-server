@@ -46,12 +46,32 @@ Parse.Cloud.define("createOrgRole", async (request) => {
     newRole.set("displayName", role.displayName);
     newRole.set("organization", request.user.get('organization'));
     newRole.set("permissionList", validatedRolePermission(role.permissions))
-
     await newRole.save(null, {useMasterKey: true}).then(role => {
         return role
     }, (error) => {
         throw error
     });
+    const permissionPromises = [];
+    mainRoleNames.forEach(roleName => {
+        permissionPromises.push(
+            new Parse.Query(Parse.Role).equalTo('name', roleName)
+                .first({useMasterKey: true}).then(async value => {
+                if (value) {
+                    if (newRole.get('permissionList')[roleName]) {
+                        console.log('adding role: ', roleName)
+                        value.getRoles().add(newRole)
+                    } else {
+                        console.log('removing role: ', roleName)
+                        value.getRoles().remove(newRole)
+                    }
+                    await value.save(null, {useMasterKey: true});
+                }
+            }, (error) => {
+                console.log(error)
+            }))
+    })
+    await Promise.all(permissionPromises)
+
 
     return newRole
 }, {
@@ -75,10 +95,11 @@ Parse.Cloud.define("editOrgRole", async (request) => {
     parseRole.set("displayName", role.displayName);
     parseRole.set("organization", request.user.get('organization'));
     parseRole.set("permissionList", validatedRolePermission(role.permissions))
-    console.log('\n\n\nd')
-    mainRoleNames.forEach(async roleName => {
-        await new Parse.Query(Parse.Role).equalTo('name', roleName)
-            .first({useMasterKey: true}).then(async value => {
+    const permissionPromises = [];
+    mainRoleNames.forEach(roleName => {
+        permissionPromises.push(
+            new Parse.Query(Parse.Role).equalTo('name', roleName)
+                .first({useMasterKey: true}).then(async value => {
                 if (value) {
                     if (parseRole.get('permissionList')[roleName]) {
                         console.log('adding role: ', roleName)
@@ -91,9 +112,9 @@ Parse.Cloud.define("editOrgRole", async (request) => {
                 }
             }, (error) => {
                 console.log(error)
-            })
+            }))
     })
-    console.log('\n\n\nd')
+    await Promise.all(permissionPromises)
     return await parseRole.save(null, {useMasterKey: true}).then(role => {
         return role
     }, (error) => {
@@ -116,19 +137,19 @@ Parse.Cloud.define("currentUserRole", async (request) => {
 });
 
 Parse.Cloud.define("deleteOrgRole", async (request) => {
-    const role = await new Parse.Query(Parse.Role)
-        .equalTo('isOrganizationalRole', true)
-        .get(request.params.roleId, {useMasterKey: true}).then(value => {
-            return value.get('role')
+    const users = await new Parse.Query(Parse.User)
+        .equalTo('role', Parse.Role.createWithoutData(request.params.roleId))
+        .find({useMasterKey: true}).then(value => {
+            return value
         }, (error) => {
             throw error
         })
-    if((await role.relation('users').query().count({useMasterKey})) >0 ){
+    if (users.length > 0) {
         throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Role contains users. Cannot delete Role while it contains users')
     }
-    return await role.destroy({useMasterKey:true})
+    return await Parse.Role.createWithoutData(request.params.roleId).destroy({useMasterKey: true})
 }, {
-    fields:['roleId'],
+    fields: ['roleId'],
     requireUser: true,
     requireAllUserRoles: ['manageOrganizationMembersAndPermissions']
 });

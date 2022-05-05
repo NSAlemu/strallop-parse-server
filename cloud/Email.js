@@ -1,7 +1,7 @@
 const {
-    ConfirmationEmailOrderTemplate,
-    ConfirmationEmailTemplate,
-    ReminderEmailOrderTemplate
+    ConfirmationEmailTemplateOrderMiniList,
+    ConfirmationEmailTemplateOrder,
+    ReminderEmailOrderTemplate, ConfirmationEmailTemplateTicketOrder
 } = require("./EmailTemplates");
 
 Parse.Cloud.define("sendConfirmationEmail", async (request) => {
@@ -58,19 +58,22 @@ Parse.Cloud.define('sendEmail', async (request) => {
 }, {
     fields: ['to', 'body', 'subject']
 });
-exports.sendConfirmationEmail = async (orderId) => {
-    let confirmationEmail = ConfirmationEmailTemplate + '';
-    const confirmationEmailOrder = ConfirmationEmailOrderTemplate + '';
+exports.sendOrderConfirmationEmail = async (orderId) => {
+    let confirmationEmail = ConfirmationEmailTemplateOrder + '';
+    const confirmationEmailOrder = ConfirmationEmailTemplateOrderMiniList + '';
     let modifiedOrderTemplate = "";
-    console.log("\n\n\n\n\n\n OrderId: " + orderId + "\n\n\n\n\n")
     let order = await new Parse.Query(Parse.Object.extend('Order'))
-        .include('event').include('event.confirmationEmail').include('buyerInfo').get(orderId, {useMasterKey: true});
+        .include('event').include('event.address').include('event.confirmationEmail').include('buyerInfo').get(orderId, {useMasterKey: true});
     let event = order.get('event')
-    let ticketsOrdered = await order.relation('orderedTickets').query()
-        .include('ticketType').find({useMasterKey: true});
+    let ticketsOrdered = await order.relation('orderedTickets').query().include('attendeeInfo')
+        .include('ticketType').descending('createdAt').find({useMasterKey: true});
     confirmationEmail = confirmationEmail.replace(/{{{firstName}}}/g, order.get("buyerInfo").get("firstName"));
     confirmationEmail = confirmationEmail.replace(/{{{eventName}}}/g, event.get('name'));
+    confirmationEmail = confirmationEmail.replace(/{{{Message From the organizers}}}/g, event.get('confirmationEmail').get('html').length > 10 ? 'Message From the organizers' : '');
     confirmationEmail = confirmationEmail.replace(/{{{emailHTMLDescription}}}/g, event.get('confirmationEmail').get('html'));
+    confirmationEmail = confirmationEmail.replace(/{{{buyerFullName}}}/g, getFullName(order.get("buyerInfo").get('firstName'), order.get("buyerInfo").get('middleName'), order.get("buyerInfo").get('lastName')))
+    confirmationEmail = confirmationEmail.replace(/{{{orderDate}}}/g, getFullDate(order.createdAt))
+    confirmationEmail = confirmationEmail.replace(/{{{buyerEmail}}}/g, order.get("buyerInfo").get('email'))
     confirmationEmail = confirmationEmail.replace(/{{{eventId}}}/g, event.id);
     confirmationEmail = confirmationEmail.replace(/{{{orderNumber}}}/g, order.id)
     confirmationEmail = confirmationEmail.replace(/{{{purchaseDate}}}/g, formatDate(new Date(order.createdAt)))
@@ -99,12 +102,86 @@ exports.sendConfirmationEmail = async (orderId) => {
         orderModification = orderModification.replace(/{{{purchasedTicketCost}}}/g, (value.price * value.count) + '')
         modifiedOrderTemplate += orderModification;
     }
+    confirmationEmail = confirmationEmail.replace(/{{{orderTotal}}}/g, getTicketOrderTotal(ticketsOrdered))
     confirmationEmail = confirmationEmail.replace(/{{{purchasedOrder}}}/g, modifiedOrderTemplate)
+    await Parse.Cloud.run("sendEmail", {
+        to: order.get('buyerInfo').get('email'), subject: event.get('name') + "  Email Receipt",
+        body: confirmationEmail
+    });
+    await sendIndividualConfirmationEmail(order, event, ticketsOrdered)
     return {
         to: order.get('buyerInfo').get('email'),
         body: confirmationEmail,
-        subject: event.get('name') + " Confirmation!"
+        subject: event.get('name') + " Email Receipt"
     };
+}
+sendIndividualConfirmationEmail = async (order, event, ticketsOrdered) => {
+    for (const ticketsOrder of ticketsOrdered) {
+        if (ticketsOrder.get('ticketType').get('requireAttendeeInfo')) {
+            let confirmationEmail = ConfirmationEmailTemplateTicketOrder + '';
+
+            confirmationEmail = confirmationEmail.replace(/{{{firstName}}}/g, order.get("buyerInfo").get("firstName"));
+            confirmationEmail = confirmationEmail.replace(/{{{eventName}}}/g, event.get('name'));
+            confirmationEmail = confirmationEmail.replace(/{{{eventFullTime}}}/g, getFullDateRange(event.get('startDate'),event.get('endDate')));
+            confirmationEmail = confirmationEmail.replace(/{{{eventAddressName}}}/g, event.get('address').get('name'));
+            confirmationEmail = confirmationEmail.replace(/{{{eventAddressAddress1}}}/g, event.get('address').get('address1'));
+            confirmationEmail = confirmationEmail.replace(/{{{eventAddressAddress2}}}/g, event.get('address').get('address2'));
+            confirmationEmail = confirmationEmail.replace(/{{{eventAddressCity}}}/g, event.get('address').get('city'));
+            confirmationEmail = confirmationEmail.replace(/{{{Message From the organizers}}}/g, event.get('confirmationEmail').get('html').length > 10 ? 'Message From the organizers' : '');
+            confirmationEmail = confirmationEmail.replace(/{{{emailHTMLDescription}}}/g, event.get('confirmationEmail').get('html'));
+            confirmationEmail = confirmationEmail.replace(/{{{eventId}}}/g, event.id);
+            confirmationEmail = confirmationEmail.replace(/{{{orderNumber}}}/g, ticketsOrder.id)
+            confirmationEmail = confirmationEmail.replace(/{{{attendeeFullName}}}/g, getFullName(ticketsOrder.get("attendeeInfo").get('firstName'), ticketsOrder.get("attendeeInfo").get('middleName'), ticketsOrder.get("attendeeInfo").get('lastName')))
+            confirmationEmail = confirmationEmail.replace(/{{{ticketName}}}/g, ticketsOrder.get('ticketType').get('name'))
+            confirmationEmail = confirmationEmail.replace(/{{{purchaseDate}}}/g, formatDate(new Date(ticketsOrder.createdAt)))
+            confirmationEmail = confirmationEmail.replace(/{{{purchaserEmail}}}/g, ticketsOrder.get("attendeeInfo").get("email"))
+            confirmationEmail = confirmationEmail.replace(/{{{purchasedOrder}}}/g, '')
+            await Parse.Cloud.run("sendEmail", {
+                to: order.get('buyerInfo').get('email'), subject: event.get('name') + " Confirmation!",
+                body: confirmationEmail
+            });
+        }
+    }
+}
+getFullName = (fName, mName, lName) => {
+    return '' + (fName ? fName + ' ' : '') + (mName ? mName + ' ' : '') + (lName ? lName : '');
+}
+
+getFullDate = (startDate) => {
+    return  startDate.toLocaleDateString('en-us', {
+        weekday: "long",
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: 'numeric',
+        minute: 'numeric'
+    });
+}
+getFullDateRange = (startDate, endDate) => {
+    const start = startDate.toLocaleDateString('en-us', {
+        weekday: "long",
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: 'numeric',
+        minute: 'numeric'
+    });
+    const end = endDate.toLocaleDateString('en-us', {
+        weekday: "long",
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: 'numeric',
+        minute: 'numeric'
+    });
+    return start+' to '+end
+}
+getTicketOrderTotal = (ticketOrders)=> {
+    let count = 0;
+    ticketOrders.forEach(ticketOrder=>{
+        count+= ticketOrder.get('ticketType').get('price');
+    })
+    return count
 }
 
 exports.sendReminderEmail = async (eventId) => {
@@ -118,7 +195,7 @@ exports.sendReminderEmail = async (eventId) => {
     innerQuery.equalTo("event", eventId);
     const query = new Parse.Query(TicketOrder);
     query.matchesQuery("ticketType", innerQuery);
-    const ticketOrders = await query.include('attendeeInfo').include('ticketType').find({useMasterKey:true});
+    const ticketOrders = await query.include('attendeeInfo').include('ticketType').descending('createdAt').find({useMasterKey: true});
     for (let ticketOrder of ticketOrders) {
         let reminderEmail = confirmationEmail.replace(/{{{firstName}}}/g, ticketOrder.get("attendeeInfo").get("firstName"));
         reminderEmail = reminderEmail.replace(/{{{eventName}}}/g, event.get('name'));

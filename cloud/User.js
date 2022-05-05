@@ -1,7 +1,7 @@
 const {authenticateOrganizationThroughOrganization, authenticateOrganizationThroughUser} = require("./authentication");
 Parse.Cloud.define("createUser", async (request) => {
     const params = request.params
-    const user = new Parse.User();
+    let user = new Parse.User();
     user.setACL(new Parse.ACL())
     user.set('username', params.userData.username);
     user.set('password', params.password);
@@ -24,16 +24,18 @@ Parse.Cloud.define("createUser", async (request) => {
     user.set('role', role);
     user.set('organization', request.user.get('organization'))
 
-    return await user.signUp(null, {useMasterKey: true}).then(async newUser => {
-        newUser.get('organization').relation('users').add(newUser);
-        newUser.save(null, {useMasterKey: true}).then(async value => {
-        }, (error) => {
-            throw error
-        })
-        return user
+    user = await user.signUp(null, {useMasterKey: true}).then(async newUser => {
+        return newUser
     }, (error) => {
         throw error
     })
+    const org  = user.get('organization')
+    org.relation('users').add(user);
+    await org.save(null, {useMasterKey: true}).then(async value => {
+    }, (error) => {
+        throw error
+    })
+    return user
 
 }, {
     fields: ['userData', 'selectedRoleId', 'password'],
