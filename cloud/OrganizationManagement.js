@@ -1,3 +1,18 @@
+const {authenticateOrganizationThroughOrganization} = require("./authentication");
+Parse.Cloud.define("getOrganization", async (request) => {
+    const params = request.params;
+    await authenticateOrganizationThroughOrganization(params.orgId, request.user.id);
+
+    return await new Parse.Query(Parse.Object.extend('Organization'))
+        .get(params.orgId, {useMasterKey: true}).then(value => {
+            return value
+        }, (error) => {
+            throw error
+        })
+}, {
+    fields: ['orgId'],
+    requireUser: true,
+});
 exports.organizationAfterSave = async (request) => {
     const organization = request.object;
     const createdBy = request.user;
