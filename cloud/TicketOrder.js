@@ -176,6 +176,17 @@ Parse.Cloud.define("downloadAttendeeCSV", async (request) => {
     requireUser: true,
     requireAllUserRoles: ['manageOrders']
 });
+Parse.Cloud.define("getAllTicketStatuses", async (request) => {
+
+    return await new Parse.Query(Parse.Object.extend('TicketStatus'))
+        .find({useMasterKey: true}).then(value => {
+            return value
+        }, (error) => {
+            throw error
+        })
+}, {
+    requireUser: true,
+});
 
 exports.createTicketOrder = async (statusId, selectedTicketTypeId, attendeeInfo, eventId, orderId) => {
 

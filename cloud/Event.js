@@ -26,7 +26,7 @@ Parse.Cloud.define("createEvent", async (request) => {
     const user = await new Parse.Query(Parse.User)
         .get(request.user.id, {useMasterKey: true})
 
-    console.log('\n\n\n NEW EVENT: ', JSON.stringify(params),"\n\n\n")
+    console.log('\n\n\n NEW EVENT: ', JSON.stringify(params), "\n\n\n")
     const newEvent = new (Parse.Object.extend("Event"))();
     newEvent.setACL(new Parse.ACL())
     newEvent.set("locationName", params.locationName);
@@ -260,6 +260,18 @@ async function updateEventStatus(params) {
         throw error
     })
 }
+
+Parse.Cloud.define("getAllEventStatuses", async (request) => {
+
+    return await new Parse.Query(Parse.Object.extend('EventStatus'))
+        .find({useMasterKey: true}).then(value => {
+            return value
+        }, (error) => {
+            throw error
+        })
+}, {
+    requireUser: true,
+});
 
 exports.basicEventDetails = async (eventId, userId) => {
     await authenticateOrganizationThroughEvent(eventId, userId)
