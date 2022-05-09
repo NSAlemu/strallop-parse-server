@@ -24,7 +24,7 @@ Parse.Cloud.define("getAllTicketTypes", async (request) => {
 }, {
     fields: ['eventId'],
     requireUser: true,
-    requireAllUserRoles: ['manageTickets']
+    requireAnyUserRoles: ['manageTickets','manageOrders']
 });
 
 //include how many people have bought the tickets

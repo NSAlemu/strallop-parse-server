@@ -223,19 +223,26 @@ Parse.Cloud.define("deleteOrder", async (request) => {
     requireUser: true,
     requireAllUserRoles: ['manageOrders']
 });
+Parse.Cloud.define("sendOrderConfirmation", async (request) => {
+    const orderId = request.params.orderId;
+    await authenticateOrganizationThroughOrder(orderId, request.user.id);
+    await email.sendOrderConfirmationEmail(orderId).then(value => {
+
+    }, (error)=>{
+        throw error;
+    });
+    return true
+}, {
+    fields: ['orderId'],
+    requireUser: true,
+    requireAllUserRoles: ['resendConfirmationEmails']
+});
 Parse.Cloud.afterSave("Order", async (request) => {
     const mod_order = request.object;
     const orig_order = request.original;
 
     if ((mod_order && orig_order) && (mod_order.get("status") !== orig_order.get("status"))) {
-        let mailList = [];
-        const ticketOrders = await mod_order.relation('orderedTickets').query().find({useMasterKey: true});
-        for (const ticketOrder of ticketOrders) {
-            if(!mailList.includes(ticketOrder.get('email'))){
-                mailList.push(mailList.includes(ticketOrder.get('email')));
-                const emailToSend = await email.sendOrderConfirmationEmail(request.object.id)
-            }
-        }
+        await email.sendOrderConfirmationEmail(request.object.id);
     }
 })
 

@@ -43,7 +43,7 @@ Parse.Cloud.define("getAllTicketOrders", async (request) => {
 }, {
     fields: ['eventId'],
     requireUser: true,
-    requireAnyUserRoles: ['manageOrders', 'viewAttendees']
+    requireAnyUserRoles: ['manageOrders', 'viewAttendees', 'checkinAttendees']
 });
 
 Parse.Cloud.define("getAllTicketOrdersForOrder", async (request) => {
@@ -64,7 +64,7 @@ Parse.Cloud.define("getAllTicketOrdersForOrder", async (request) => {
 }, {
     fields: ['orderId'],
     requireUser: true,
-    requireAllUserRoles: ['manageOrders']
+    requireAnyUserRoles: ['manageOrders', 'viewAttendees', 'checkinAttendees']
 });
 
 Parse.Cloud.define("addTicketOrderToOrder", async (request) => {

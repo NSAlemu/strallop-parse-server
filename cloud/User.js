@@ -29,12 +29,10 @@ Parse.Cloud.define("createUser", async (request) => {
     }, (error) => {
         throw error
     })
-    const org  = user.get('organization')
+    const org = user.get('organization')
     org.relation('users').add(user);
-    await org.save(null, {useMasterKey: true}).then(async value => {
-    }, (error) => {
-        throw error
-    })
+    role.getUsers().add(user);
+    await Promise.all([role.save(null, {useMasterKey: true}), org.save(null, {useMasterKey: true})])
     return user
 
 }, {
@@ -69,8 +67,8 @@ Parse.Cloud.define("updateUser", async (request) => {
     await authenticateOrganizationThroughUser(params.userData.id, request.user.id)
     parseUser.set('username', params.userData.username)
     parseUser.set('name', params.userData.name)
-
-    const role = await new Parse.Query(Parse.Role)
+    const oldRole = parseUser.get('role');
+    const newRole = await new Parse.Query(Parse.Role)
         .include('organization')
         .get(params.selectedRoleId, {useMasterKey: true})
         .then(value => {
@@ -81,13 +79,13 @@ Parse.Cloud.define("updateUser", async (request) => {
         }, (error) => {
             throw error
         })
-    parseUser.set('role', role)
+    parseUser.set('role', newRole)
+    newRole.getUsers().add(parseUser);
+    oldRole.getUsers().remove(parseUser);
+    const promiseRes = await Promise.all([parseUser.save(null, {useMasterKey: true}),newRole.save(null, {useMasterKey: true}),
+        oldRole.save(null, {useMasterKey: true})])
+    return promiseRes[0]
 
-    return await parseUser.save(null, {useMasterKey: true}).then(value => {
-        return value
-    }, (error) => {
-        throw error;
-    })
 }, {
     fields: ['userData', 'selectedRoleId'],
     requireAllUserRoles: ['manageOrganizationMembersAndPermissions']
@@ -97,7 +95,7 @@ Parse.Cloud.define("updateSelf", async (request) => {
     const params = request.params;
     const thisUser = request.user;
 
-    console.log('\n\n\n'+JSON.stringify(params)+'\n\n\n')
+    console.log('\n\n\n' + JSON.stringify(params) + '\n\n\n')
     thisUser.set('phone', params.phoneNumber)
     thisUser.set('email', params.email)
 
@@ -113,14 +111,14 @@ Parse.Cloud.define("updateSelf", async (request) => {
         thisUser.unset('profileImg')
     }
 
-   return  await thisUser.save(null, {useMasterKey: true}).then(value => {
+    return await thisUser.save(null, {useMasterKey: true}).then(value => {
         return value
     }, (error) => {
         throw error;
     })
 }, {
-    fields:['phoneNumber', 'email'],
-    requireUser:true
+    fields: ['phoneNumber', 'email'],
+    requireUser: true
 });
 
 Parse.Cloud.define("setDisableUser", async (request) => {
