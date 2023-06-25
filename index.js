@@ -3,6 +3,7 @@
 // compatible API routes.
 
 const express = require('express');
+require('dotenv').config()
 const {default: ParseServer, ParseGraphQLServer} = require('parse-server');
 const path = require('path');
 const args = process.argv || [];
@@ -23,7 +24,7 @@ const config = {
   liveQuery: {
     classNames: ['Event', 'Order', 'BoardList', 'ListCard', 'CardChecklist', 'CardChecklistItem', 'CardLabel'], // List of classes to support for query subscriptions
   },
-  publicServerURL: 'https://strallop.herokuapp.com/parse',
+  publicServerURL: 'https://strallop-server.nw.r.appspot.com/parse',
   appName: 'Strallop',
   emailAdapter: {
     module: 'parse-smtp-template',

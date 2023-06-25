@@ -22,7 +22,9 @@
     "test": "mongodb-runner start && jasmine",
     "coverage": "nyc jasmine",
     "prettier": "prettier --write '{cloud,spec}/{**/*,*}.js' 'index.js'",
-    "watch": "babel-watch index.js"
+    "watch": "babel-watch index.js",
+    "build": "npm run static && npm run prerender",
+    "create-env": "printenv > .env"
   },
   "engines": {
     "node": "16.5.0"
