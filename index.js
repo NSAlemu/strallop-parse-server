@@ -32,7 +32,7 @@ const config = {
       port: 587,
       host: "smtp.gmail.com",
       user: "noreply.strallop@gmail.com",
-      password  : process.env.noreplyPassword,
+      password  : "lkjlkjjlkjlkjlkj",
       fromAddress: 'noreply@strallop.com',
       multiTemplate: true,
       confirmTemplatePath: "/views/templates/passwordEmailTemplate.html",
